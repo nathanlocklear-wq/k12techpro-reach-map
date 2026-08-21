@@ -11,6 +11,55 @@ function normalizeState(value=''){
   return STATE_NAMES[upper] || STATES.find(s=>s.toLowerCase()===v.toLowerCase()) || v;
 }
 
+function norm(value=''){
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g,' ')
+    .replace(/[^a-z0-9 ]/g,'');
+}
+
+function statusRank(status=''){
+  return status==='Member' ? 3 : status==='Contacted' ? 2 : 1;
+}
+
+function dedupeRows(input){
+  const seen=new Map();
+
+  input.forEach(r=>{
+    const stateName=normalizeState(r.State);
+    const school=norm(r['School/District']);
+    const city=norm(r.City);
+    const address=norm(r.Address||r['Street Address']);
+    const lat=Number(r.Latitude), lon=Number(r.Longitude);
+    const coordKey=(Number.isFinite(lat)&&Number.isFinite(lon)) ? `${lat.toFixed(5)}|${lon.toFixed(5)}` : '';
+
+    // Primary duplicate check: same school name in the same city/state.
+    // Fallback: same street address or exact location when a name is missing.
+    const key=school
+      ? `${stateName}|${school}|${city}`
+      : address
+        ? `${stateName}|addr|${address}|${city}`
+        : `${stateName}|coord|${coordKey}`;
+
+    if(!seen.has(key)){
+      seen.set(key,r);
+      return;
+    }
+
+    const existing=seen.get(key);
+    const existingHasCoords=hasCoords(existing);
+    const newHasCoords=hasCoords(r);
+
+    // Keep the most useful copy: coordinates first, then the highest-value status.
+    if((newHasCoords&&!existingHasCoords) || statusRank(r.Status)>statusRank(existing.Status)){
+      seen.set(key,{...existing,...r});
+    }
+  });
+
+  return [...seen.values()];
+}
+
 function csvParse(text){
   const result=[];
   let row=[],field='',quoted=false;
@@ -41,7 +90,9 @@ function csvParse(text){
 async function loadData(){
   const r=await fetch(SHEET_CSV_URL,{cache:'no-store'});
   if(!r.ok) throw new Error(`Sheet returned ${r.status}`);
-  rows=csvParse(await r.text());
+  const parsed=csvParse(await r.text());
+  rows=dedupeRows(parsed);
+  console.log(`Loaded ${parsed.length} rows; ${rows.length} unique locations after deduplication.`);
   buildStates();
 }
 
@@ -49,7 +100,6 @@ function buildStates(){
   const box=$('states');box.innerHTML='';
   STATES.forEach(s=>{
     const n=rows.filter(r=>normalizeState(r.State)===s).length;
-    const ready=rows.filter(r=>normalizeState(r.State)===s&&hasCoords(r)).length;
     const b=document.createElement('button');
     b.className='state';
     b.innerHTML=`<div class="name">${s}</div><div class="count">${n.toLocaleString()} schools & districts</div>`;
@@ -66,17 +116,21 @@ function hasCoords(r){
 function initMap(){
   map=L.map('map',{zoomControl:false,tap:true}).setView([39.5,-96],4);
   L.control.zoom({position:'bottomright'}).addTo(map);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    subdomains:'abcd',
+    maxZoom:20,
+    attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
+  }).addTo(map);
   cluster=L.markerClusterGroup({chunkedLoading:true});
   map.addLayer(cluster);
 }
 
-function markerColor(s){return s==='Member'?'#2f78b9':s==='Contacted'?'#f57c00':'#e02427';}
+function markerColor(s){return s==='Member'?'#4aa3ff':s==='Contacted'?'#ff9f1c':'#ff3b3f';}
 function makeMarker(r){
   if(!hasCoords(r))return null;
   const lat=Number(r.Latitude),lon=Number(r.Longitude);
   const color=markerColor(r.Status);
-  const icon=L.divIcon({className:'',html:`<div style="width:15px;height:15px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 5px #0008"></div>`,iconSize:[15,15],iconAnchor:[7,7]});
+  const icon=L.divIcon({className:'',html:`<div style="width:17px;height:17px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 0 2px #0008,0 0 10px ${color}aa"></div>`,iconSize:[17,17],iconAnchor:[8,8]});
   const m=L.marker([lat,lon],{icon});
   m.bindPopup(`<div class="popup-title">${esc(r['School/District'])}</div><div class="popup-status">${esc(r.Status)}</div><div class="popup-row">${esc(r.Address||r['Street Address']||'')}<br>${esc(r.City||'')} ${esc(r.ZIP||r.Zipcode||'')}</div>`);
   return m;
