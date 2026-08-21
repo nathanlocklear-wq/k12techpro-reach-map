@@ -12,23 +12,27 @@ function normalizeState(value=''){
 }
 
 function csvParse(text){
-  const lines=text.trim().split(/\r?\n/);
-  if(!lines.length)return[];
-  const parse=s=>{
-    let a=[],v='',q=false;
-    for(let i=0;i<s.length;i++){
-      const c=s[i];
-      if(c==='"'&&s[i+1]==='"'){v+='"';i++;continue;}
-      if(c==='"'){q=!q;continue;}
-      if(c===','&&!q){a.push(v);v='';continue;}
-      v+=c;
-    }
-    a.push(v);return a;
-  };
-  const h=parse(lines[0]);
-  return lines.slice(1).filter(Boolean).map(l=>{
-    const a=parse(l),o={};
-    h.forEach((k,i)=>o[k]=(a[i]||'').trim());
+  const result=[];
+  let row=[],field='',quoted=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(c==='"'){
+      if(quoted && text[i+1]==='"'){field+='"';i++;}
+      else quoted=!quoted;
+    } else if(c===',' && !quoted){
+      row.push(field);field='';
+    } else if((c==='\n' || c==='\r') && !quoted){
+      if(c==='\r' && text[i+1]==='\n') i++;
+      row.push(field);field='';
+      if(row.some(v=>v!=='')) result.push(row);
+      row=[];
+    } else field+=c;
+  }
+  if(field!=='' || row.length){row.push(field);result.push(row);}
+  if(!result.length)return[];
+  const headers=result[0].map(h=>String(h).trim());
+  return result.slice(1).map(a=>{
+    const o={}; headers.forEach((k,i)=>o[k]=String(a[i]??'').trim());
     o.State=normalizeState(o.State);
     return o;
   });
@@ -39,20 +43,24 @@ async function loadData(){
   if(!r.ok) throw new Error(`Sheet returned ${r.status}`);
   rows=csvParse(await r.text());
   buildStates();
-  const ready=rows.filter(r=>r.Latitude!==''&&r.Longitude!==''&&Number.isFinite(Number(r.Latitude))&&Number.isFinite(Number(r.Longitude))).length;
-  console.log(`Loaded ${rows.length} rows; ${ready} have coordinates.`);
 }
 
 function buildStates(){
   const box=$('states');box.innerHTML='';
   STATES.forEach(s=>{
-    const n=rows.filter(r=>r.State===s).length;
+    const n=rows.filter(r=>normalizeState(r.State)===s).length;
+    const ready=rows.filter(r=>normalizeState(r.State)===s&&hasCoords(r)).length;
     const b=document.createElement('button');
     b.className='state';
     b.innerHTML=`<div class="name">${s}</div><div class="count">${n.toLocaleString()} schools & districts</div>`;
     b.onclick=()=>openState(s);
     box.appendChild(b);
   });
+}
+
+function hasCoords(r){
+  const lat=Number(String(r.Latitude).trim()), lon=Number(String(r.Longitude).trim());
+  return r.Latitude!==''&&r.Longitude!==''&&Number.isFinite(lat)&&Number.isFinite(lon);
 }
 
 function initMap(){
@@ -64,10 +72,9 @@ function initMap(){
 }
 
 function markerColor(s){return s==='Member'?'#2f78b9':s==='Contacted'?'#f57c00':'#e02427';}
-
 function makeMarker(r){
+  if(!hasCoords(r))return null;
   const lat=Number(r.Latitude),lon=Number(r.Longitude);
-  if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
   const color=markerColor(r.Status);
   const icon=L.divIcon({className:'',html:`<div style="width:15px;height:15px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 5px #0008"></div>`,iconSize:[15,15],iconAnchor:[7,7]});
   const m=L.marker([lat,lon],{icon});
@@ -77,9 +84,16 @@ function makeMarker(r){
 
 function render(){
   cluster.clearLayers();
-  const data=rows.filter(r=>(!state||r.State===state)&&(filter==='all'||r.Status===filter));
-  data.forEach(r=>{const m=makeMarker(r);if(m)cluster.addLayer(m);});
+  const data=rows.filter(r=>(!state||normalizeState(r.State)===state)&&(filter==='all'||r.Status===filter));
+  const bounds=[];
+  data.forEach(r=>{
+    const m=makeMarker(r);
+    if(m){cluster.addLayer(m);bounds.push(m.getLatLng());}
+  });
   $('stateTitle').textContent=state||'All Schools';
+  if(map && bounds.length){
+    setTimeout(()=>map.fitBounds(L.latLngBounds(bounds),{padding:[30,30],maxZoom:7}),100);
+  }
 }
 
 function openState(s){
@@ -87,7 +101,7 @@ function openState(s){
   $('home').style.display='none';$('mapView').style.display='block';$('homeBtn').style.display='block';
   if(!map)initMap();
   render();
-  map.setView(mapCenters[s]||[39.5,-96],6);
+  if(!cluster.getLayers().length) map.setView(mapCenters[s]||[39.5,-96],6);
   setTimeout(()=>map.invalidateSize(),100);
   resetIdle();
 }
@@ -98,10 +112,8 @@ function home(){
   if(map)map.remove();
   map=null;cluster=null;
 }
-
 function resetIdle(){clearTimeout(idleTimer);idleTimer=setTimeout(home,120000);}
 function esc(x=''){return String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
-
 $('homeBtn').onclick=home;
 $('backBtn').onclick=home;
 $('filterBtn').onclick=()=>$('filterPanel').classList.toggle('open');
