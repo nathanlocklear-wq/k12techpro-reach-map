@@ -1,8 +1,15 @@
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRDjkaoyGRAQWhN8ZxFCXj1c0TdBvoEIQ_0JaBi6PX7Ym3ezvdk7b1ME9Q6ISveDuAHjTBp5gPFAA8/pub?output=csv';
 const STATES=['Missouri','Illinois','Indiana','California','Nebraska','North Dakota','Pennsylvania'];
+const STATE_NAMES={MO:'Missouri',IL:'Illinois',IN:'Indiana',CA:'California',NE:'Nebraska',ND:'North Dakota',PA:'Pennsylvania'};
 const mapCenters={Missouri:[38.4561,-92.2884],Illinois:[40.0,-89.2],Indiana:[39.8,-86.1],California:[36.8,-119.4],Nebraska:[41.5,-99.9],'North Dakota':[47.5,-100.5],Pennsylvania:[40.9,-77.8]};
 let rows=[],map,cluster,state=null,filter='all',idleTimer;
 const $=id=>document.getElementById(id);
+
+function normalizeState(value=''){
+  const v=String(value).trim();
+  const upper=v.toUpperCase();
+  return STATE_NAMES[upper] || STATES.find(s=>s.toLowerCase()===v.toLowerCase()) || v;
+}
 
 function csvParse(text){
   const lines=text.trim().split(/\r?\n/);
@@ -22,6 +29,7 @@ function csvParse(text){
   return lines.slice(1).filter(Boolean).map(l=>{
     const a=parse(l),o={};
     h.forEach((k,i)=>o[k]=(a[i]||'').trim());
+    o.State=normalizeState(o.State);
     return o;
   });
 }
