@@ -93,13 +93,14 @@ function buildDashboard(){
     grid.appendChild(card);
 
     const map=L.map(`map-${index}`,{
-      zoomControl:index===6,
+      zoomControl:true,
       attributionControl:index===6,
       scrollWheelZoom:false,
       doubleClickZoom:true,
       touchZoom:true,
       dragging:true,
-      tap:true
+      tap:true,
+      keyboard:false
     });
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'}).addTo(map);
     maps[state]=map;
