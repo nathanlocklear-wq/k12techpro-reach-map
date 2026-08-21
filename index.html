@@ -3,16 +3,27 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>K12TechPro Reach Map</title>
+<title>K12TechPro Reach Maps</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
-<link rel="stylesheet" href="styles.css?v=20260821-3">
+<link rel="stylesheet" href="styles.css?v=20260821-4">
 </head><body>
 <div id="app">
-<header><div class="brand"><img src="assets/k12techpro-logo.svg"><div><div class="brand-title">Reach Maps</div><div class="brand-sub">K12TechPro school outreach</div></div></div><button id="homeBtn">⌂ States</button></header>
-<main id="home"><div class="hero"><h1>Explore Our Reach</h1><p>Tap a state to explore schools and districts.</p></div><div id="states" class="states"></div></main>
-<section id="mapView"><div id="map"></div><div class="mapbar"><button id="backBtn">← States</button><div id="stateTitle">All Schools</div><button id="filterBtn">Filters</button></div><div id="legend"><span><i class="dot member"></i> Members</span><span><i class="dot contacted"></i> Contacted</span><span><i class="dot noton"></i> Not on Pro</span></div><div id="filterPanel" class="panel"><button data-filter="all">All</button><button data-filter="Member">Members</button><button data-filter="Contacted">Contacted</button><button data-filter="Not on Pro">Not on Pro</button></div><div id="loading">Loading schools…</div></section>
+<header>
+  <div class="brand"><img src="assets/k12techpro-logo.svg"><div><div class="brand-title">Reach Maps</div><div class="brand-sub">K12TechPro school outreach</div></div></div>
+  <div class="toolbar">
+    <div id="legend"><span><i class="dot member"></i> Members</span><span><i class="dot contacted"></i> Contacted</span><span><i class="dot noton"></i> Not on Pro</span></div>
+    <button id="filterBtn">Filters</button>
+  </div>
+</header>
+<div id="filterPanel" class="panel">
+  <button data-filter="all">All</button>
+  <button data-filter="Member">Members</button>
+  <button data-filter="Contacted">Contacted</button>
+  <button data-filter="Not on Pro">Not on Pro</button>
 </div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script><script src="app.js?v=20260821-2"></script>
+<main id="mapsGrid" aria-label="K12TechPro reach maps"></main>
+<div id="loading">Loading schools…</div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js?v=20260821-4"></script>
 </body></html>
