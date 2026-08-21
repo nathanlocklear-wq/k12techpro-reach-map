@@ -17,6 +17,20 @@ function norm(value=''){
   return String(value).trim().toLowerCase().replace(/\s+/g,' ').replace(/[^a-z0-9 ]/g,'');
 }
 
+function isTrue(value=''){
+  return ['true','yes','y','1'].includes(String(value).trim().toLowerCase());
+}
+
+function deriveStatus(r){
+  const memberRaw=r.Member ?? r['Member Status'] ?? '';
+  const contactedRaw=r.Contacted ?? r['Contacted Status'] ?? '';
+  const category=String(r['Map Category'] ?? r['Map Category (Automatic)'] ?? '').trim().toLowerCase();
+
+  if(isTrue(memberRaw) || category==='member') return 'Member';
+  if(isTrue(contactedRaw) || category==='contacted' || category==='contacted - non member' || category==='contacted - non-member') return 'Contacted';
+  return 'Not on Pro';
+}
+
 function hasCoords(r){
   const lat=Number(String(r.Latitude).trim());
   const lon=Number(String(r.Longitude).trim());
@@ -31,6 +45,7 @@ function dedupeRows(input){
   const seen=new Map();
   input.forEach(r=>{
     r.State=normalizeState(r.State);
+    r.Status=deriveStatus(r);
     const school=norm(r['School/District']);
     const city=norm(r.City);
     const address=norm(r.Address||r['Street Address']);
@@ -39,7 +54,7 @@ function dedupeRows(input){
     const key=school?`${r.State}|${school}|${city}`:address?`${r.State}|addr|${address}|${city}`:`${r.State}|coord|${coordKey}`;
     if(!seen.has(key)){seen.set(key,r);return;}
     const old=seen.get(key);
-    if((hasCoords(r)&&!hasCoords(old))||statusRank(r.Status)>statusRank(old.Status)) seen.set(key,{...old,...r});
+    if((hasCoords(r)&&!hasCoords(old))||statusRank(r.Status)>statusRank(old.Status)) seen.set(key,{...old,...r,Status:r.Status});
   });
   return [...seen.values()];
 }
@@ -57,7 +72,7 @@ function csvParse(text){
   if(field!==''||row.length){row.push(field);result.push(row);}
   if(!result.length)return[];
   const headers=result[0].map(h=>String(h).trim());
-  return result.slice(1).map(a=>{const o={};headers.forEach((k,i)=>o[k]=String(a[i]??'').trim());o.State=normalizeState(o.State);return o;});
+  return result.slice(1).map(a=>{const o={};headers.forEach((k,i)=>o[k]=String(a[i]??'').trim());o.State=normalizeState(o.State);o.Status=deriveStatus(o);return o;});
 }
 
 function markerColor(status){
@@ -127,6 +142,9 @@ async function loadData(){
   const r=await fetch(SHEET_CSV_URL,{cache:'no-store'});
   if(!r.ok)throw new Error(`Sheet returned ${r.status}`);
   rows=dedupeRows(csvParse(await r.text()));
+  const counts={Member:0,Contacted:0,'Not on Pro':0};
+  rows.forEach(r=>counts[r.Status]=(counts[r.Status]||0)+1);
+  console.log('Status counts',counts);
   buildDashboard();
 }
 
