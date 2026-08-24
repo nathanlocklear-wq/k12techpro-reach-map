@@ -44,24 +44,34 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/schools?select=school_district,state,city,address,zip,member,contacted,status,latitude,longitude&latitude=not.is.null&longitude=not.is.null&order=state.asc,school_district.asc`,
-      {
+    const pageSize = 1000;
+    let offset = 0;
+    const rows = [];
+
+    while (true) {
+      const url = `${supabaseUrl}/rest/v1/schools?select=school_district,state,city,address,zip,member,contacted,status,latitude,longitude&latitude=not.is.null&longitude=not.is.null&order=state.asc,school_district.asc&limit=${pageSize}&offset=${offset}`;
+
+      const response = await fetch(url, {
         headers: {
           apikey: serviceRoleKey,
           Authorization: `Bearer ${serviceRoleKey}`,
           Accept: 'application/json'
         }
-      }
-    );
+      });
 
-    if (!response.ok) {
-      const detail = await response.text();
-      console.error('Supabase schools read failed:', response.status, detail);
-      return res.status(502).json({ error: 'Unable to load map data' });
+      if (!response.ok) {
+        const detail = await response.text();
+        console.error('Supabase schools read failed:', response.status, detail);
+        return res.status(502).json({ error: 'Unable to load map data' });
+      }
+
+      const page = await response.json();
+      rows.push(...page);
+
+      if (page.length < pageSize) break;
+      offset += pageSize;
     }
 
-    const rows = await response.json();
     return res.status(200).json(rows);
   } catch (error) {
     console.error('Schools API error:', error);
