@@ -29,10 +29,15 @@ module.exports = async function handler(req, res) {
   }
 
   const cookies = parseCookies(req.headers.cookie || '');
-  const suppliedKey = cookies.k12_map_session;
-  const expectedKey = process.env.MAP_ACCESS_TOKEN;
+  const suppliedCookie = cookies.k12_map_session;
+  const expectedMapToken = process.env.MAP_ACCESS_TOKEN;
+  const suppliedRiseToken = req.headers['x-rise-display-token'];
+  const expectedRiseToken = process.env.RISE_DISPLAY_TOKEN;
 
-  if (!expectedKey || !safeEqual(suppliedKey, expectedKey)) {
+  const mapCookieAuthorized = expectedMapToken && safeEqual(suppliedCookie, expectedMapToken);
+  const riseAuthorized = expectedRiseToken && safeEqual(suppliedRiseToken, expectedRiseToken);
+
+  if (!mapCookieAuthorized && !riseAuthorized) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
