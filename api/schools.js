@@ -1,16 +1,38 @@
+const crypto = require('crypto');
+
+function parseCookies(header = '') {
+  return header.split(';').reduce((acc, part) => {
+    const i = part.indexOf('=');
+    if (i === -1) return acc;
+    const key = part.slice(0, i).trim();
+    const value = part.slice(i + 1).trim();
+    acc[key] = decodeURIComponent(value);
+    return acc;
+  }, {});
+}
+
+function safeEqual(a, b) {
+  const aBuf = Buffer.from(String(a || ''));
+  const bBuf = Buffer.from(String(b || ''));
+  if (aBuf.length !== bBuf.length) return false;
+  return crypto.timingSafeEqual(aBuf, bBuf);
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  res.setHeader('Referrer-Policy', 'no-referrer');
 
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const suppliedKey = req.headers['x-map-key'];
+  const cookies = parseCookies(req.headers.cookie || '');
+  const suppliedKey = cookies.k12_map_session;
   const expectedKey = process.env.MAP_ACCESS_TOKEN;
 
-  if (!expectedKey || suppliedKey !== expectedKey) {
+  if (!expectedKey || !safeEqual(suppliedKey, expectedKey)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
