@@ -1,0 +1,29 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<title>K12TechPro Reach Maps</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="styles-v9.css">
+</head><body>
+<div id="app">
+<header>
+  <div class="brand"><img src="https://k12techpro.com/wp-content/uploads/2025/03/cropped-K12TechPro.png" alt="K12TechPro"><div><div class="brand-title">Reach Maps</div><div class="brand-sub">K12TechPro school outreach</div></div></div>
+  <div class="toolbar">
+    <div id="legend"><span><i class="dot member"></i> Members</span><span><i class="dot contacted"></i> Contacted</span><span><i class="dot noton"></i> Not on Pro</span></div>
+    <button id="filterBtn">Filters</button>
+  </div>
+</header>
+<div id="filterPanel" class="panel">
+  <button data-filter="all" class="active">All</button>
+  <button data-filter="Member">Members</button>
+  <button data-filter="Contacted">Contacted</button>
+  <button data-filter="Not on Pro">Not on Pro</button>
+</div>
+<main id="mapsGrid" aria-label="K12TechPro reach maps"></main>
+<div id="loading">Loading private map…</div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app-secure.js"></script>
+</body></html>
