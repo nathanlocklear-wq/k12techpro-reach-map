@@ -69,7 +69,9 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!process.env.SYNC_SECRET || req.headers['x-sync-secret'] !== process.env.SYNC_SECRET) {
+  const suppliedToken = req.headers['x-sync-token'];
+  const expectedToken = process.env.SYNC_TOKEN;
+  if (!expectedToken || suppliedToken !== expectedToken) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
