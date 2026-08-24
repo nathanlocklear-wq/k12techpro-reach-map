@@ -3,8 +3,6 @@ const FALLBACK={Missouri:[38.4561,-92.2884],Illinois:[40,-89.2],Indiana:[39.8,-8
 let rows=[],activeFilter='all';
 const maps={},layers={};
 const $=id=>document.getElementById(id);
-const params=new URLSearchParams(location.search);
-const accessKey=params.get('access')||'';
 
 function hasCoords(r){return Number.isFinite(Number(r.latitude))&&Number.isFinite(Number(r.longitude))}
 function color(s){return s==='Member'?'#4aa3ff':s==='Contacted'?'#ff9f1c':'#ff3b3f'}
@@ -62,13 +60,9 @@ document.querySelectorAll('#filterPanel button').forEach(b=>b.addEventListener('
 }));
 
 async function load(){
-  if(!accessKey){
-    $('loading').textContent='Private map — access key required.';
-    return;
-  }
   try{
-    const response=await fetch('/api/schools',{cache:'no-store',headers:{'x-map-key':accessKey}});
-    if(response.status===401){$('loading').textContent='Private map — invalid access key.';return;}
+    const response=await fetch('/api/schools',{cache:'no-store',credentials:'same-origin'});
+    if(response.status===401){$('loading').textContent='Private map — device not authorized.';return;}
     if(!response.ok) throw new Error(`API returned ${response.status}`);
     rows=await response.json();
     build();
