@@ -11,16 +11,36 @@ function color(s){return s==='Member'?'#4aa3ff':s==='Contacted'?'#ff9f1c':'#ff3b
 function esc(x=''){return String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function popup(r){return `<div class="popup-title">${esc(r.school_district)}</div><div class="popup-status">${esc(r.status)}</div><div class="popup-row">${esc(r.address||'')}<br>${esc(r.city||'')} ${esc(r.zip||'')}</div>`}
 
+function installDarkTileStyle(){
+  if(document.getElementById('osm-dark-filter')) return;
+  const style=document.createElement('style');
+  style.id='osm-dark-filter';
+  style.textContent=`
+    .leaflet-tile-pane {
+      filter: invert(1) hue-rotate(180deg) brightness(.62) contrast(1.28) saturate(.72);
+    }
+    .leaflet-container {
+      background:#07111f;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 function makeMap(state,index){
   const map=L.map(`map-${index}`,{zoomControl:false,attributionControl:index===6,scrollWheelZoom:false,doubleClickZoom:true,touchZoom:true,dragging:true,tap:true,keyboard:false,boxZoom:false});
   L.control.zoom({position:'bottomleft'}).addTo(map);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'}).addTo(map);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    subdomains:'abc',
+    maxZoom:19,
+    attribution:'&copy; OpenStreetMap contributors'
+  }).addTo(map);
   maps[state]=map;
   layers[state]=L.layerGroup().addTo(map);
   map.setView(FALLBACK[state],5);
 }
 
 function build(){
+  installDarkTileStyle();
   const grid=$('mapsGrid');
   grid.innerHTML='';
   STATES.forEach((state,index)=>{
